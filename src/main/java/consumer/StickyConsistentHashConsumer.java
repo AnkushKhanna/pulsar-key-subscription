@@ -44,17 +44,17 @@ public class StickyConsistentHashConsumer {
     }
 
     public static void main(String[] args) throws PulsarClientException {
-        final var partitionIndex = Integer.parseInt(args[0]);
-        final var partitionCount = Integer.parseInt(args[1]);
+        final var nodeIndex = Integer.parseInt(args[0]);
+        final var nodeCount = Integer.parseInt(args[1]);
         final var numberOfPoints = Integer.parseInt(args[2]);
 
         final var consistentHashingRanges = new ConsistentHashingStickyRanges();
 
-        final var ranges = consistentHashingRanges.getRange(partitionIndex, partitionCount, numberOfPoints);
+        final var ranges = consistentHashingRanges.getRange(nodeIndex, nodeCount, numberOfPoints);
 
         System.out.println(consistentHashingRanges.calcPercentage(ranges));
 
-        final var stickyConsumer = new StickyConsistentHashConsumer(ranges, partitionIndex);
+        final var stickyConsumer = new StickyConsistentHashConsumer(ranges, nodeIndex);
 
         stickyConsumer.consume();
     }

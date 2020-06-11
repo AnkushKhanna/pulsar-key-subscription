@@ -16,28 +16,28 @@ public class ConsistentHashingStickyRanges {
         return createRanges(partitionCount, numberOfPoints);
     }
 
-    public List<Range> getRange(final int partitionIndex,
-                                final int partitionCount,
+    public List<Range> getRange(final int nodeIndex,
+                                final int nodeCount,
                                 final int numberOfPoints) {
-        return createRanges(partitionCount, numberOfPoints).get(partitionIndex);
+        return createRanges(nodeCount, numberOfPoints).get(nodeIndex);
     }
 
     public double calcPercentage(final List<Range> ranges) {
         return (ranges.stream().mapToInt(r -> r.getEnd()-r.getStart() +1).sum() / (double) KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE) * 100;
     }
 
-    private Map<Integer, List<Range>> createRanges(final int partitionCount,
+    private Map<Integer, List<Range>> createRanges(final int nodeCount,
                                                    final int numberOfPoints) {
         final NavigableMap<Integer, Integer> partitionHashes = new TreeMap<>();
         for (int i = 0; i < numberOfPoints; i++) {
-            for (int j = 0; j < partitionCount; j++) {
+            for (int j = 0; j < nodeCount; j++) {
                 final var hash = Murmur3_32Hash.getInstance().makeHash((i + "_" + j).getBytes()) % KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE;
                 partitionHashes.put(hash, j);
             }
         }
         final var lastEntry = partitionHashes.lastEntry();
         if (lastEntry.getKey() != KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE - 1) {
-            partitionHashes.put(KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE - 1, partitionCount - 1);
+            partitionHashes.put(KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE - 1, nodeCount - 1);
         }
 
         final Map<Integer, List<Range>> partitionRanges = new HashMap<>();

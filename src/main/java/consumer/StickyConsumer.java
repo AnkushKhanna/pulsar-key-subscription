@@ -18,11 +18,11 @@ public class StickyConsumer {
     private final Consumer<String> consumer;
 
     public StickyConsumer(final Range range,
-                          final int partitionIndex) throws PulsarClientException {
+                          final int nodeIndex) throws PulsarClientException {
         consumer = client.newConsumer(Schema.STRING)
             .subscriptionMode(SubscriptionMode.Durable)
             .topic("persistent://public/default/region-partitioned")
-            .consumerName("Region Consumer: " + partitionIndex)
+            .consumerName("Region Consumer: " + nodeIndex)
             .subscriptionName("regions-subscription-sticky-hashed")
             .subscriptionType(SubscriptionType.Key_Shared)
             .keySharedPolicy(KeySharedPolicy.stickyHashRange().ranges(range))
@@ -42,14 +42,14 @@ public class StickyConsumer {
     }
 
     public static void main(String[] args) throws PulsarClientException {
-        final var partitionIndex = Integer.parseInt(args[0]);
-        final var partitionCount = Integer.parseInt(args[1]);
+        final var nodeIndex = Integer.parseInt(args[0]);
+        final var nodeCount = Integer.parseInt(args[1]);
 
-        final var size = KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE / partitionCount;
+        final var size = KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE / nodeCount;
 
-        final var range = Range.of(partitionIndex * size, (partitionIndex + 1) * size - 1);
+        final var range = Range.of(nodeIndex * size, (nodeIndex + 1) * size - 1);
 
-        final var stickyConsumer = new StickyConsumer(range, partitionIndex);
+        final var stickyConsumer = new StickyConsumer(range, nodeIndex);
 
         stickyConsumer.consume();
     }

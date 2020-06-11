@@ -9,6 +9,7 @@ import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.Schema;
+import shutdown.ShutdownHook;
 
 public class ProducerTrafficUpdated {
 
@@ -52,28 +53,6 @@ public class ProducerTrafficUpdated {
             Thread.sleep(2000);
         }
 
-    }
-
-    static class ShutdownHook extends Thread {
-
-        private final PulsarClient client;
-        private final Producer<String> producer;
-
-        public ShutdownHook(PulsarClient client, final Producer<String> produce) {
-            this.client = client;
-            this.producer = produce;
-        }
-
-        @Override
-        public void run() {
-            System.out.println("Performing shutdown");
-            try {
-                producer.close();
-                client.shutdown();
-            } catch (PulsarClientException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     public static void main(String[] args) throws PulsarClientException, InterruptedException {

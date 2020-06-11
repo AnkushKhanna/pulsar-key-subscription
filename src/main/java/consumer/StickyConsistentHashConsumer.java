@@ -1,5 +1,6 @@
 package consumer;
 
+import java.util.List;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.KeySharedPolicy;
 import org.apache.pulsar.client.api.PulsarClient;
@@ -8,24 +9,25 @@ import org.apache.pulsar.client.api.Range;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.SubscriptionMode;
 import org.apache.pulsar.client.api.SubscriptionType;
+import ranges.ConsistentHashingStickyRanges;
 import shutdown.ShutdownHook;
 
-public class StickyConsumer {
+public class StickyConsistentHashConsumer {
     final PulsarClient client = PulsarClient.builder()
         .serviceUrl("pulsar://localhost:6650")
         .build();
 
     private final Consumer<String> consumer;
 
-    public StickyConsumer(final Range range,
-                          final int partitionIndex) throws PulsarClientException {
+    public StickyConsistentHashConsumer(final List<Range> ranges,
+                                        final int partitionIndex) throws PulsarClientException {
         consumer = client.newConsumer(Schema.STRING)
             .subscriptionMode(SubscriptionMode.Durable)
             .topic("persistent://public/default/region-partitioned")
             .consumerName("Region Consumer: " + partitionIndex)
             .subscriptionName("regions-subscription-sticky-hashed")
             .subscriptionType(SubscriptionType.Key_Shared)
-            .keySharedPolicy(KeySharedPolicy.stickyHashRange().ranges(range))
+            .keySharedPolicy(KeySharedPolicy.stickyHashRange().ranges(ranges.toArray(new Range[ranges.size()])))
             .subscribe();
 
         final var shutdownHook = new ShutdownHook(client, consumer);
@@ -44,12 +46,15 @@ public class StickyConsumer {
     public static void main(String[] args) throws PulsarClientException {
         final var partitionIndex = Integer.parseInt(args[0]);
         final var partitionCount = Integer.parseInt(args[1]);
+        final var numberOfPoints = Integer.parseInt(args[2]);
 
-        final var size = KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE / partitionCount;
+        final var consistentHashingRanges = new ConsistentHashingStickyRanges();
 
-        final var range = Range.of(partitionIndex * size, (partitionIndex + 1) * size - 1);
+        final var ranges = consistentHashingRanges.getRange(partitionIndex, partitionCount, numberOfPoints);
 
-        final var stickyConsumer = new StickyConsumer(range, partitionIndex);
+        System.out.println(consistentHashingRanges.calcPercentage(ranges));
+
+        final var stickyConsumer = new StickyConsistentHashConsumer(ranges, partitionIndex);
 
         stickyConsumer.consume();
     }

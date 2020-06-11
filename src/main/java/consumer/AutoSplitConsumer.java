@@ -4,57 +4,42 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.KeySharedPolicy;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.SubscriptionMode;
 import org.apache.pulsar.client.api.SubscriptionType;
+import shutdown.ShutdownHook;
 
 public class AutoSplitConsumer {
+    final PulsarClient client = PulsarClient.builder()
+        .serviceUrl("pulsar://localhost:6650")
+        .build();
 
-    private final Consumer<byte[]> consumer;
-
-    public AutoSplitConsumer(final PulsarClient client,
-                             final int partitionIndex) throws PulsarClientException {
-        consumer = client.newConsumer()
-            .subscriptionMode(SubscriptionMode.Durable)
-            .topic("persistent://public/default/region-partitioned")
-            .consumerName("Region Consumer: " + partitionIndex)
-            .subscriptionName("regions-subscription-hashed")
-            .subscriptionType(SubscriptionType.Key_Shared)
-            .keySharedPolicy(KeySharedPolicy.autoSplitHashRange())
-            .subscribe();
-
-    }
+    private final Consumer<String> consumer = client.newConsumer(Schema.STRING)
+        .subscriptionMode(SubscriptionMode.Durable)
+        .topic("persistent://public/default/region-partitioned")
+        .consumerName("Region Consumer")
+        .subscriptionName("regions-subscription-hashed")
+        .subscriptionType(SubscriptionType.Key_Shared)
+        .keySharedPolicy(KeySharedPolicy.autoSplitHashRange())
+        .subscribe();
 
     public void consume() throws PulsarClientException {
-        try {
-            while (true) {
-                final var message = consumer.receive();
-                System.out.println("Key of the message");
-                System.out.println(message.getKey());
-                consumer.acknowledge(message);
-            }
-        } finally {
-            System.out.println("Closing consumer");
-            consumer.close();
+        while (true) {
+            final var message = consumer.receive();
+            System.out.println("Key of the message");
+            System.out.println(message.getKey());
+            consumer.acknowledge(message);
         }
     }
 
+    public AutoSplitConsumer() throws PulsarClientException {
+        final var shutdownHook = new ShutdownHook(client, consumer);
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
+    }
+
     public static void main(String[] args) throws PulsarClientException {
-        final int partitionIndex = Integer.parseInt(args[0]);
-        final PulsarClient client = PulsarClient.builder()
-            .serviceUrl("pulsar://localhost:6650")
-            .build();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Shutdown Hook is running !");
-            try {
-                client.shutdown();
-            } catch (PulsarClientException e) {
-                e.printStackTrace();
-            }
-        }));
-        System.out.println("Application Terminating ...");
-
-        final var stickyConsumer = new AutoSplitConsumer(client, partitionIndex);
+        final var stickyConsumer = new AutoSplitConsumer();
         stickyConsumer.consume();
     }
 

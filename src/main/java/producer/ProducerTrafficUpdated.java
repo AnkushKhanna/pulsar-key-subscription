@@ -10,11 +10,12 @@ import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.Schema;
 import shutdown.ShutdownHook;
+import utils.Regions;
 
 public class ProducerTrafficUpdated {
 
-    private final List<String> regions = new ArrayList<>();
-    final PulsarClient client = PulsarClient.builder()
+    private final List<String> regions = Regions.getRegions();
+    private final PulsarClient client = PulsarClient.builder()
         .serviceUrl("pulsar://localhost:6650")
         .build();
     private final Producer<String> producer = client.newProducer(Schema.STRING)
@@ -24,19 +25,6 @@ public class ProducerTrafficUpdated {
         .create();
 
     public ProducerTrafficUpdated() throws PulsarClientException {
-        regions.add("Berlin");
-        regions.add("Hyderabad");
-        regions.add("SF");
-        regions.add("Dallas");
-        regions.add("Delhi");
-        regions.add("Calcutta");
-        regions.add("New York");
-        regions.add("Munich");
-        regions.add("London");
-        regions.add("Wales");
-        regions.add("Hamburg");
-        regions.add("Kiev");
-
         final var shutdownHook = new ShutdownHook(client, producer);
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }

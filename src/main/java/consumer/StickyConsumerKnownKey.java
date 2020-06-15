@@ -1,5 +1,6 @@
 package consumer;
 
+import java.util.List;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.KeySharedPolicy;
 import org.apache.pulsar.client.api.PulsarClient;
@@ -8,24 +9,27 @@ import org.apache.pulsar.client.api.Range;
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.SubscriptionMode;
 import org.apache.pulsar.client.api.SubscriptionType;
+import ranges.KnownKeysStickyRange;
 import shutdown.ShutdownHook;
+import utils.Regions;
 
-public class StickyConsumer {
+public class StickyConsumerKnownKey {
+
     private final PulsarClient client = PulsarClient.builder()
         .serviceUrl("pulsar://localhost:6650")
         .build();
 
     private final Consumer<String> consumer;
 
-    public StickyConsumer(final Range range,
-                          final int nodeIndex) throws PulsarClientException {
+    public StickyConsumerKnownKey(final List<Range> ranges,
+                                  final int nodeIndex) throws PulsarClientException {
         consumer = client.newConsumer(Schema.STRING)
             .subscriptionMode(SubscriptionMode.Durable)
             .topic("persistent://public/default/region-partitioned")
             .consumerName("Region Consumer: " + nodeIndex)
-            .subscriptionName("regions-subscription-sticky-hashed")
+            .subscriptionName("regions-subscription-known-keys-sticky-hashed")
             .subscriptionType(SubscriptionType.Key_Shared)
-            .keySharedPolicy(KeySharedPolicy.stickyHashRange().ranges(range))
+            .keySharedPolicy(KeySharedPolicy.stickyHashRange().ranges(ranges.toArray(new Range[ranges.size()])))
             .subscribe();
 
         final var shutdownHook = new ShutdownHook(client, consumer);
@@ -45,12 +49,14 @@ public class StickyConsumer {
         final var nodeIndex = Integer.parseInt(args[0]);
         final var nodeCount = Integer.parseInt(args[1]);
 
-        final var size = KeySharedPolicy.DEFAULT_HASH_RANGE_SIZE / nodeCount;
+        final List<String> regions = Regions.getRegions();
+        final var sizePerNode = (int) Math.ceil(regions.size() / (double) nodeCount);
 
-        final var range = Range.of(nodeIndex * size, (nodeIndex + 1) * size - 1);
+        final KnownKeysStickyRange stickyRanges = new KnownKeysStickyRange();
 
-        final var stickyConsumer = new StickyConsumer(range, nodeIndex);
+        final var ranges = stickyRanges.getRange(regions, nodeIndex, sizePerNode, nodeCount);
 
-        stickyConsumer.consume();
+        final StickyConsumerKnownKey consumer = new StickyConsumerKnownKey(ranges, nodeIndex);
+        consumer.consume();
     }
 }

@@ -13,7 +13,7 @@ import ranges.ConsistentHashingStickyRanges;
 import shutdown.ShutdownHook;
 
 public class StickyConsistentHashConsumer {
-    final PulsarClient client = PulsarClient.builder()
+    private final PulsarClient client = PulsarClient.builder()
         .serviceUrl("pulsar://localhost:6650")
         .build();
 

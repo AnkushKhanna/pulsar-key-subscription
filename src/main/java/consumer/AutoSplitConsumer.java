@@ -10,7 +10,7 @@ import org.apache.pulsar.client.api.SubscriptionType;
 import shutdown.ShutdownHook;
 
 public class AutoSplitConsumer {
-    final PulsarClient client = PulsarClient.builder()
+    private final PulsarClient client = PulsarClient.builder()
         .serviceUrl("pulsar://localhost:6650")
         .build();
 
